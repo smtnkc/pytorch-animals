@@ -7,7 +7,7 @@ import os
 import shutil
 from sklearn.model_selection import train_test_split
 
-def prepare_image_folders(data_dir, category_names, rand_state):
+def prepare_image_folders():
 
     """
     Prepares directory structure given below.
@@ -30,8 +30,12 @@ def prepare_image_folders(data_dir, category_names, rand_state):
               zebra/      -> 56
     """
 
+    data_dir = os.path.join(os.path.realpath(''), 'data')
+    category_names = ["bear", "elephant", "leopard", "zebra"]
+    rand_state = 2020
+
     prep_path = os.path.join(data_dir, 'prepared')
-    
+
     # create/clean train, val and test folders
     folders = ['train', 'val', 'test']
     for folder in folders:
@@ -80,3 +84,5 @@ def prepare_image_folders(data_dir, category_names, rand_state):
             shutil.copyfile(src, dst)
 
         print("   -> Copied!")
+
+prepare_image_folders()
