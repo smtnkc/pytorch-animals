@@ -24,7 +24,7 @@ python3 main.py --epoch=3
 To plot results:
 
 ```bash
-python3 plot.py --csv_path='logs/stats_pretrained_XXX.csv'
+python3 plot.py --metric='acc' --csv_path='logs/xxx.csv'
 ```
 
 # References:

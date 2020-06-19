@@ -24,11 +24,12 @@ parser = argparse.ArgumentParser(description='PyTorch Animals')
 parser.add_argument('--seed', default=2020, type=int)
 parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--epochs', default=5, type=int)
-parser.add_argument('--lr', default=0.001, type=float)
+parser.add_argument('--lr', default=1e-3, type=float)
+parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
 parser.add_argument('--input_size', default=224, type=int)
-parser.add_argument('--show_plots', default=False, type=str2bool)
-parser.add_argument('--use_pretrained', default=True, type=str2bool)
-parser.add_argument('--device', default='cpu', type=str)
+parser.add_argument('--debug', default=False, type=str2bool)
+parser.add_argument('--pretrained', default=True, type=str2bool)
+parser.add_argument('--device', default='cpu', type=str, help='cpu or cuda')
 parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
 
 args = parser.parse_args()
@@ -82,7 +83,7 @@ data_loaders = {x: DL(img_folders[x], batch_size=args.batch_size, shuffle=True,
                       pin_memory=(args.device == 'cuda'))
                 for x in ['train', 'val', 'test']}
 
-if args.show_plots:
+if args.debug:
     display_single(img_folders, NORMALIZE, CATEGORY_NAMES, img_id=153)  # 153 is arbitrarily chosen
     display_multiple(args, NORMALIZE, CATEGORY_NAMES, data_loaders, N=4)  # display 4 images
 
@@ -93,7 +94,10 @@ model, params_to_update = initialize_model(NUM_CATEGORIES, args)
 model = model.to(args.device)
 
 # Setup the optimizer
-optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+if args.optimizer == 'sgdm':
+    optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+elif args.optimizer == 'adam':
+    optimizer = optim.AdamW(params_to_update, lr=args.lr)
 
 # Setup the loss function
 criterion = torch.nn.CrossEntropyLoss()
@@ -108,7 +112,7 @@ fprint("\nTRAINING WITH PARAMS:\n{}".format(TRAIN_PARAMS), args, True)
 model, optimizer = train_model(model, data_loaders, criterion, optimizer, args)
 
 # Or load a checkpoint
-# checkpoint = torch.load('models/alexnet_pretrained_0.995536.pth')
+# checkpoint = torch.load('models/xxx.pth')
 # model.load_state_dict(checkpoint['model_state_dict'])
 # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 # epoch = checkpoint['epoch']

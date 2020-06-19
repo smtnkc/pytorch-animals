@@ -62,12 +62,14 @@ def fprint(string, args, on_console=False):
     if on_console:
         print(string)  # also print on console
 
-    file_name = 'log_{}.txt'.format(args.t_start)
-    # example file_name: log_20200609_164520.txt
+    logs_dir = os.path.join(os.path.realpath(''), 'logs')
+    if not os.path.exists(logs_dir):
+        os.makedirs(logs_dir)
 
-    log_file = os.path.join('logs', file_name)
+    logs_path = os.path.join(logs_dir, '{}_{}.txt'.format(
+        'pt' if args.pretrained else 'fs', args.t_start))
 
-    with open(log_file, "a") as f:
+    with open(logs_path, "a") as f:
         f.write(string + "\n")
 
 #
@@ -84,7 +86,7 @@ def calculate_metrics(preds, labels):
     # fprint(classification_report(labels, preds), args, True)
     acc = accuracy_score(labels, preds)
     f1 = f1_score(labels, preds, average='weighted')
-    recall = recall_score(labels, preds, average='weighted')
-    prec = precision_score(labels, preds, average='weighted')
+    # recall = recall_score(labels, preds, average='weighted')
+    # prec = precision_score(labels, preds, average='weighted')
 
     return acc, f1

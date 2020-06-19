@@ -1,3 +1,4 @@
+import os
 import time
 import copy
 import torch
@@ -10,10 +11,10 @@ from utils import fprint, calculate_metrics
 
 def initialize_model(out_size, args):
 
-    model = models.alexnet(pretrained=args.use_pretrained)
+    model = models.alexnet(pretrained=args.pretrained)
 
     # initially disable all parameter updates
-    if args.use_pretrained:
+    if args.pretrained:
         for param in model.parameters():
             param.requires_grad = False
 
@@ -21,7 +22,7 @@ def initialize_model(out_size, args):
     in_size = model.classifier[6].in_features
     model.classifier[6] = torch.nn.Linear(in_size, out_size)
 
-    if args.use_pretrained:
+    if args.pretrained:
         params_to_update = []
         for param in model.parameters():
             if param.requires_grad:
@@ -95,16 +96,16 @@ def train_model(model, data_loaders, criterion, optimizer, args):
 
                 # statistics
                 batch_loss = loss.item() * inputs.size(0)
-                batch_correct = torch.sum(preds == labels.data)
+                batch_corrects = torch.sum(preds == labels.data)
                 phase_loss += batch_loss
-                phase_corrects += batch_correct
+                phase_corrects += batch_corrects
                 phase_preds = torch.cat((phase_preds, preds), 0)
                 phase_labels = torch.cat((phase_labels, labels), 0)
 
             epoch_loss = phase_loss / len(data_loaders[phase].dataset)
             epoch_acc, epoch_f1 = calculate_metrics(phase_preds, phase_labels)
 
-            fprint('{:7}  loss: {:.6f}   acc: {:.6f}   f1: {:.6f}'.format(
+            fprint('{:7} loss: {:.6f}   acc: {:.6f}   f1: {:.6f}'.format(
                 phase, epoch_loss, epoch_acc, epoch_f1), args, True)
 
             stats_df.at[epoch, phase + '_loss'] = round(epoch_loss, 6)
@@ -120,19 +121,23 @@ def train_model(model, data_loaders, criterion, optimizer, args):
                 best_epoch = epoch
 
     time_elapsed = time.time() - since
-    fprint('\nTraining completed in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60), args, True)
+    fprint('\nTraining completed in {:.0f}m {:.0f}s'.format(
+        time_elapsed // 60, time_elapsed % 60), args, True)
 
     # reload best model weights and best optimizer variables
     model.load_state_dict(best_model_state_dict)
     optimizer.load_state_dict(best_opt_state_dict)
 
     # save best checkpoint
-    if args.use_pretrained:
-        cp_path = './models/pretrained_acc_{:.6f}_{}.pth'.format(best_acc, args.t_start)
-        stats_path = './logs/stats_pretrained_{}.csv'.format(args.t_start)
-    else:
-        cp_path = './models/scratch_acc_{:.6f}_{}.pth'.format(best_acc, args.t_start)
-        stats_path = './logs/stats_scratch_{}.csv'.format(args.t_start)
+    cp_dir = os.path.join(os.path.realpath(''), 'models')
+    if not os.path.exists(cp_dir):
+        os.makedirs(cp_dir)
+
+    cp_path = os.path.join(cp_dir, '{}_{}_{:.6f}.pth'.format(
+        'pt' if args.pretrained else 'fs', args.t_start, best_acc))
+
+    # save stats
+    stats_path = 'logs/{}_{}.csv'.format('pt' if args.pretrained else 'fs', args.t_start)
 
     stats_df.to_csv(stats_path, sep=',', index=False)  # write loss and acc values
     fprint('Saved loss and accuracy stats -> {}'.format(stats_path), args, True)
@@ -145,8 +150,8 @@ def train_model(model, data_loaders, criterion, optimizer, args):
         'acc': best_acc
     }, cp_path)
 
-    fprint('Saved best checkpoint ->  Epoch: {} Val Loss: {:.6f} Val Acc: {:6f}'
-          .format(best_epoch, best_loss, best_acc), args, True)
+    fprint('Saved best checkpoint ->  Epoch: {} val loss: {:.6f}   acc: {:6f}'
+           .format(best_epoch, best_loss, best_acc), args, True)
 
     return model, optimizer
 
@@ -159,11 +164,15 @@ def train_model(model, data_loaders, criterion, optimizer, args):
 
 
 def test_model(model, data_loaders, args):
+    fprint('\nRUNNING FOR TEST SET...', args, True)
     was_training = model.training  # store mode
     model.eval()  # run in evaluation mode
 
     with torch.no_grad():
-        running_corrects = 0
+        phase_corrects = 0
+        phase_preds = torch.LongTensor()
+        phase_labels = torch.LongTensor()
+
         for inputs, labels in data_loaders['test']:
             inputs = inputs.to(args.device)
             labels = labels.to(args.device)
@@ -171,14 +180,16 @@ def test_model(model, data_loaders, args):
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
 
-            batch_correct = torch.sum(preds == labels.data)
-            running_corrects += batch_correct
+            batch_corrects = torch.sum(preds == labels.data)
+            phase_corrects += batch_corrects
+            phase_preds = torch.cat((phase_preds, preds), 0)
+            phase_labels = torch.cat((phase_labels, labels), 0)
 
         dataset = data_loaders['test'].dataset
-        acc = running_corrects.double() / len(dataset)
+        acc, f1 = calculate_metrics(phase_preds, phase_labels)
 
-        fprint('\nTEST RESULTS:\n{}/{} predictions are correct -> Test Acc: {:.4f}'
-               .format(running_corrects, len(dataset), acc), args, True)
+        fprint('{}/{} predictions are correct -> Test acc: {:.6f}   f1: {:.6f}'.format(
+            phase_corrects, len(dataset), acc, f1), args, True)
 
     model.train(mode=was_training)  # reinstate the previous mode
 
