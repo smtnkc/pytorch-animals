@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import platform
 import argparse
+import json
 import datetime as dt
 from str2bool import str2bool
 import torch
@@ -15,6 +16,7 @@ from torch.utils.data import DataLoader as DL
 
 from utils import display_single, display_multiple, fprint
 from model_helper import initialize_model, train_model, test_model, predict
+from plot import generate_plots
 
 print("Python Version:", platform.python_version())
 print("PyTorch Version:", torch.__version__)
@@ -22,7 +24,7 @@ print("Torchvision Version:", torchvision.__version__.split('a')[0])
 
 parser = argparse.ArgumentParser(description='PyTorch Animals')
 parser.add_argument('--seed', default=2020, type=int)
-parser.add_argument('--batch_size', default=16, type=int)
+parser.add_argument('--batch_size', default=14, type=int)
 parser.add_argument('--epochs', default=5, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
 parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
@@ -43,7 +45,8 @@ CATEGORY_NAMES = ["bear", "elephant", "leopard", "zebra"]
 NUM_CATEGORIES = len(CATEGORY_NAMES)
 
 # Detect if we have a GPU available
-args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+updated_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+args.device = str(updated_device)  # keep as str for now, otherwise cannot dump json
 fprint("Running on {}...".format(args.device), args, True)
 
 # All pre-trained models expect input images normalized in the same way
@@ -91,7 +94,7 @@ if args.debug:
 model, params_to_update = initialize_model(NUM_CATEGORIES, args)
 
 # Send the model to CPU or GPU
-model = model.to(args.device)
+model = model.to(updated_device)
 
 # Setup the optimizer
 if args.optimizer == 'sgdm':
@@ -104,11 +107,21 @@ criterion = torch.nn.CrossEntropyLoss()
 
 # Log training parameters
 TRAIN_PARAMS = ""
+JSON_PARAMS = {}  # to dump the run configurations that will be used in plotting
 for param in vars(args):
     TRAIN_PARAMS += param + '=' + str(getattr(args, param)) + '\n'
+    JSON_PARAMS[param] = getattr(args, param)
 fprint("\nTRAINING WITH PARAMS:\n{}".format(TRAIN_PARAMS), args, True)
 
+# Dump run configs to JSON file
+JSON_PATH = os.path.join(os.path.realpath(''), 'logs/{}_{}.json'.format(
+    'pt' if args.pretrained else 'fs', args.t_start
+))
+with open(JSON_PATH, "w") as json_data_file:
+    json.dump(JSON_PARAMS, json_data_file)
+
 # Train and evaluate
+args.device = updated_device  # now load updated device object to args.device (str -> obj)
 model, optimizer = train_model(model, data_loaders, criterion, optimizer, args)
 
 # Or load a checkpoint
@@ -118,6 +131,9 @@ model, optimizer = train_model(model, data_loaders, criterion, optimizer, args)
 # epoch = checkpoint['epoch']
 # loss = checkpoint['loss']
 # acc = checkpoint['acc']
+
+# Generate plots:
+generate_plots(JSON_PATH)
 
 test_score = test_model(model, data_loaders, args)
 

@@ -21,10 +21,11 @@ Then run like:
 ```bash
 python3 main.py --epoch=3
 ```
+
 To plot results:
 
 ```bash
-python3 plot.py --metric='acc' --csv_path='logs/xxx.csv'
+python3 plot.py --json_path='logs/xxx.json'
 ```
 
 # References:

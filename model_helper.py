@@ -30,7 +30,8 @@ def initialize_model(out_size, args):
     else:
         params_to_update = model.parameters()  # parameters of all layers
 
-    fprint("\nARCHITECTURE:", args, True)
+    fprint("\nARCHITECTURE:\n\n{}\n".format(model), args, True)
+
     for name, param in model.named_parameters():
         fprint("{:25} requires_grad = {}".format(name, param.requires_grad), args, True)
 
@@ -139,7 +140,7 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     # save stats
     stats_path = 'logs/{}_{}.csv'.format('pt' if args.pretrained else 'fs', args.t_start)
 
-    stats_df.to_csv(stats_path, sep=',', index=False)  # write loss and acc values
+    stats_df.to_csv(stats_path, sep=',', index=True)  # write loss and acc values
     fprint('Saved loss and accuracy stats -> {}'.format(stats_path), args, True)
 
     torch.save({
