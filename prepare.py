@@ -4,12 +4,13 @@ This structure is required by torchvision.datasets.ImageFolder().
 """
 
 import os
+import argparse
 import shutil
 from sklearn.model_selection import train_test_split
 
 import cfg
 
-def prepare_image_folders():
+def prepare_image_folders(args):
 
     """
     Prepares directory structure given below.
@@ -54,10 +55,10 @@ def prepare_image_folders():
         # split paths into train, val and test
         train_file_names, test_file_names = train_test_split(category_file_names,
                                                              test_size=0.2,
-                                                             random_state=cfg.RAND_STATE)
+                                                             random_state=args.seed)
         train_file_names, val_file_names = train_test_split(train_file_names,
                                                             test_size=0.2,
-                                                            random_state=cfg.RAND_STATE)
+                                                            random_state=args.seed)
 
         print("{:<10s} -> Divided into {} train / {} val / {} test"
               .format(category, len(train_file_names), len(val_file_names), len(test_file_names)),
@@ -83,4 +84,13 @@ def prepare_image_folders():
 
         print("   -> Copied!")
 
-prepare_image_folders()
+
+def main():
+    parser = argparse.ArgumentParser(description='PyTorch Animals Prepare')
+    parser.add_argument('--seed', default=cfg.SEED, type=int)
+    args = parser.parse_args()
+    prepare_image_folders(args)
+
+
+if __name__ == "__main__":
+    main()

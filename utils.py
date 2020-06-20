@@ -15,7 +15,7 @@ import cfg
 
 def load_args():
     parser = argparse.ArgumentParser(description='PyTorch Animals')
-    parser.add_argument('--seed', default=2020, type=int)
+    parser.add_argument('--seed', default=cfg.SEED, type=int)
     parser.add_argument('--batch_size', default=14, type=int)
     parser.add_argument('--epochs', default=5, type=int)
     parser.add_argument('--lr', default=1e-3, type=float)
@@ -44,6 +44,23 @@ def load_args():
 #
 #
 
+
+def get_sub_dump_dir(args):
+    sub_dump_dir = os.path.join(cfg.DUMP_DIR, '{}_{}').format(
+        'pt' if args.pretrained else 'fs', args.t_start)
+    if not os.path.exists(sub_dump_dir):
+        os.makedirs(sub_dump_dir)
+
+    return sub_dump_dir
+
+#
+#
+#
+#
+#
+#
+
+
 def export_args(args):
 
     json_args = {}  # to dump the running args that will be used in plotting
@@ -51,11 +68,9 @@ def export_args(args):
         json_args[v] = getattr(args, v)
 
     # Write args to json file
-    if not os.path.exists(cfg.LOG_DIR):
-        os.makedirs(cfg.LOG_DIR)
+    sub_dump_dir = get_sub_dump_dir(args)
+    json_path = os.path.join(sub_dump_dir, 'args.json')
 
-    json_path = os.path.join(cfg.LOG_DIR, '{}_{}.json'.format(
-        'pt' if args.pretrained else 'fs', args.t_start))
     with open(json_path, "w") as json_file:
         json.dump(json_args, json_file)
     fprint('Created json args file\t-> {}\n'.format(json_path), args)
@@ -65,9 +80,10 @@ def export_args(args):
 
 
 # Plot single image
-def display_single(img_folders, img_id=-1):
+def display_single(args, img_folders, img_id=-1):
     folder = img_folders['test']
     if img_id == -1:
+        random.seed(args.seed)
         img_id = random.randint(0, len(folder))
     tensor = folder.__getitem__(img_id)
     img = tensor[0].permute(1, 2, 0)
@@ -139,14 +155,11 @@ def fprint(string, args, on_console=True):
     if on_console:
         print(string)  # also print on console
 
-    if not os.path.exists(cfg.LOG_DIR):
-        os.makedirs(cfg.LOG_DIR)
+    sub_dump_dir = get_sub_dump_dir(args)
+    logs_path = os.path.join(sub_dump_dir, 'logs.txt')
 
-    logs_path = os.path.join(cfg.LOG_DIR, '{}_{}.txt'.format(
-        'pt' if args.pretrained else 'fs', args.t_start))
-
-    with open(logs_path, "a") as f:
-        f.write(string + "\n")
+    with open(logs_path, "a") as log_file:
+        log_file.write(string + "\n")
 
 #
 #

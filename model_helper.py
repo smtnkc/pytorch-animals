@@ -6,7 +6,7 @@ import pandas as pd
 from torchvision import models
 
 import cfg
-from utils import fprint, calculate_metrics
+from utils import fprint, calculate_metrics, get_sub_dump_dir
 
 
 def initialize_model(is_pretrained):
@@ -45,8 +45,10 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     # create states df and csv file
     stats_df = pd.DataFrame(
         columns=['epoch', 'train_loss', 'train_acc', 'train_f1', 'val_loss', 'val_acc', 'val_f1'])
-    stats_path = os.path.join(cfg.LOG_DIR, '{}_{}.csv'.format(
-        'pt' if args.pretrained else 'fs', args.t_start))
+
+    sub_dump_dir = get_sub_dump_dir(args)
+    stats_path = os.path.join(sub_dump_dir, 'stats.csv')
+
     stats_df.to_csv(stats_path, sep=',', index=False)  # write loss and acc values
     fprint('\nCreated stats file\t-> {}'.format(stats_path), args)
     fprint('\nTRAINING {} EPOCHS...\n'.format(args.epochs), args)

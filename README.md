@@ -25,7 +25,7 @@ python3 main.py --epoch=3
 To plot results:
 
 ```bash
-python3 plot.py --json_path='logs/json_args_file.json'
+python3 plot.py --json_path='dumps/xxx/args.json'
 ```
 
 To predict an image using a checkpoint:

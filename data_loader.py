@@ -41,7 +41,7 @@ def get_data_loaders(args):
                     for x in cfg.PHASES}
 
     if args.display_images:
-        display_single(img_folders, img_id=153)  # 153 is arbitrarily chosen
+        display_single(args, img_folders, img_id=153)  # 153 is arbitrarily chosen
         display_multiple(args, data_loaders, N=4)  # display 4 images
 
     return data_loaders

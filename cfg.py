@@ -3,8 +3,7 @@
 from torchvision import transforms
 
 DATA_DIR = 'data'
-LOG_DIR = 'logs'
-PLOT_DIR = 'plots'
+DUMP_DIR = 'dumps'
 MODEL_DIR = 'models'
 CATEGORIES = ["bear", "elephant", "leopard", "zebra"]
 NUM_CATEGORIES = len(CATEGORIES)
@@ -13,4 +12,4 @@ NUM_CATEGORIES = len(CATEGORIES)
 # For details: https://pytorch.org/docs/master/torchvision/models.html
 NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 PHASES = ['train', 'val', 'test']
-RAND_STATE = 2020
+SEED = 2020
