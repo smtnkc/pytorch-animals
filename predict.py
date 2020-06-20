@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--label', default='', type=str)
     args = parser.parse_args()
 
-    json_path = os.path.join('logs', os.path.basename(args.model_path)[:-13]+'.json')
+    json_path = os.path.join(cfg.LOG_DIR, os.path.basename(args.model_path)[:-13]+'.json')
 
     json_args = load_json_args(json_path)
 

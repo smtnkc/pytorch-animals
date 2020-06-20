@@ -7,6 +7,8 @@ import os
 import shutil
 from sklearn.model_selection import train_test_split
 
+import cfg
+
 def prepare_image_folders():
 
     """
@@ -30,11 +32,7 @@ def prepare_image_folders():
               zebra/      -> 56
     """
 
-    data_dir = os.path.join(os.path.realpath(''), 'data')
-    category_names = ["bear", "elephant", "leopard", "zebra"]
-    rand_state = 2020
-
-    prep_path = os.path.join(data_dir, 'prepared')
+    prep_path = os.path.join(cfg.DATA_DIR, 'prepared')
 
     # create/clean train, val and test folders
     folders = ['train', 'val', 'test']
@@ -42,11 +40,11 @@ def prepare_image_folders():
         folder_path = os.path.join(prep_path, folder)
         if os.path.exists(folder_path):
             shutil.rmtree(folder_path)  # remove if already exists
-        for category in category_names:
+        for category in cfg.CATEGORIES:
             os.makedirs(os.path.join(folder_path, category))
 
-    for category in category_names:
-        category_path = os.path.join(data_dir, 'animals', category)
+    for category in cfg.CATEGORIES:
+        category_path = os.path.join(cfg.DATA_DIR, 'animals', category)
         category_file_names = []
 
         # get paths of files
@@ -56,10 +54,10 @@ def prepare_image_folders():
         # split paths into train, val and test
         train_file_names, test_file_names = train_test_split(category_file_names,
                                                              test_size=0.2,
-                                                             random_state=rand_state)
+                                                             random_state=cfg.RAND_STATE)
         train_file_names, val_file_names = train_test_split(train_file_names,
                                                             test_size=0.2,
-                                                            random_state=rand_state)
+                                                            random_state=cfg.RAND_STATE)
 
         print("{:<10s} -> Divided into {} train / {} val / {} test"
               .format(category, len(train_file_names), len(val_file_names), len(test_file_names)),

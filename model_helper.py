@@ -45,7 +45,8 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     # create states df and csv file
     stats_df = pd.DataFrame(
         columns=['epoch', 'train_loss', 'train_acc', 'train_f1', 'val_loss', 'val_acc', 'val_f1'])
-    stats_path = 'logs/{}_{}.csv'.format('pt' if args.pretrained else 'fs', args.t_start)
+    stats_path = os.path.join(cfg.LOG_DIR, '{}_{}.csv'.format(
+        'pt' if args.pretrained else 'fs', args.t_start))
     stats_df.to_csv(stats_path, sep=',', index=False)  # write loss and acc values
     fprint('\nCreated stats file\t-> {}'.format(stats_path), args)
     fprint('\nTRAINING {} EPOCHS...\n'.format(args.epochs), args)
@@ -131,11 +132,10 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     optimizer.load_state_dict(best_opt_state_dict)
 
     # save best checkpoint
-    cp_dir = 'models'
-    if not os.path.exists(cp_dir):
-        os.makedirs(cp_dir)
+    if not os.path.exists(cfg.MODEL_DIR):
+        os.makedirs(cfg.MODEL_DIR)
 
-    cp_path = os.path.join(cp_dir, '{}_{}_{:.6f}.pth'.format(
+    cp_path = os.path.join(cfg.MODEL_DIR, '{}_{}_{:.6f}.pth'.format(
         'pt' if args.pretrained else 'fs', args.t_start, best_acc))
 
     torch.save({

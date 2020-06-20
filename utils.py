@@ -10,6 +10,8 @@ import torch
 import torchvision
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, classification_report
 
+import cfg
+
 
 def load_args():
     parser = argparse.ArgumentParser(description='PyTorch Animals')
@@ -19,7 +21,7 @@ def load_args():
     parser.add_argument('--lr', default=1e-3, type=float)
     parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
     parser.add_argument('--input_size', default=224, type=int)
-    parser.add_argument('--debug', default=False, type=str2bool)
+    parser.add_argument('--display_images', default=False, type=str2bool)
     parser.add_argument('--pretrained', default=True, type=str2bool)
     parser.add_argument('--device', default='cpu', type=str, help='cpu or cuda')
     parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
@@ -49,27 +51,31 @@ def export_args(args):
         json_args[v] = getattr(args, v)
 
     # Write args to json file
-    json_path = 'logs/{}_{}.json'.format('pt' if args.pretrained else 'fs', args.t_start)
+    if not os.path.exists(cfg.LOG_DIR):
+        os.makedirs(cfg.LOG_DIR)
+
+    json_path = os.path.join(cfg.LOG_DIR, '{}_{}.json'.format(
+        'pt' if args.pretrained else 'fs', args.t_start))
     with open(json_path, "w") as json_file:
         json.dump(json_args, json_file)
-    fprint('\nCreated json args file\t-> {}'.format(json_path), args)
+    fprint('Created json args file\t-> {}\n'.format(json_path), args)
 
     return json_path
 
 
 
 # Plot single image
-def display_single(img_folders, normalize, categories, img_id=-1):
+def display_single(img_folders, img_id=-1):
     folder = img_folders['test']
     if img_id == -1:
         img_id = random.randint(0, len(folder))
     tensor = folder.__getitem__(img_id)
     img = tensor[0].permute(1, 2, 0)
     category_id = tensor[1]
-    img_denorm = img * np.array(normalize.std) + np.array(normalize.mean) # denormalization
+    img_denorm = img * np.array(cfg.NORMALIZE.std) + np.array(cfg.NORMALIZE.mean) # denormalization
     plt.figure(figsize=(3, 3))
     plt.imshow(np.clip(img_denorm, 0, 1))
-    plt.title(categories[category_id])
+    plt.title(cfg.CATEGORIES[category_id])
     plt.show()
 
 #
@@ -81,7 +87,7 @@ def display_single(img_folders, normalize, categories, img_id=-1):
 
 
 # Plot N images
-def display_multiple(args, normalize, categories, data_loaders, N):
+def display_multiple(args, data_loaders, N):
 
     # Get a batch of test data
     batch = next(iter(data_loaders['test']))
@@ -91,18 +97,19 @@ def display_multiple(args, normalize, categories, data_loaders, N):
         return
 
     images, category_ids = batch
-    title = [categories[x] for x in category_ids[0:N]]
+    title = [cfg.CATEGORIES[x] for x in category_ids[0:N]]
 
     # Get a grid of N images from batch
     grid = torchvision.utils.make_grid(images[0:N])
 
     grid = grid.permute(1, 2, 0)  # needed since PyTorch Tensors are channel-first
-    grid = grid * np.array(normalize.std) + np.array(normalize.mean) # denormalization
+    grid = grid * np.array(cfg.NORMALIZE.std) + np.array(cfg.NORMALIZE.mean) # denormalization
     grid = np.clip(grid, 0, 1)
-    plt.figure(figsize = (N*1.5, 1.5))  # set an arbitrary size
+    plt.figure(figsize=(N*1.5, 1.5))  # set an arbitrary size
     plt.imshow(grid)
     plt.title(title)
     plt.pause(0.001)  # pause a bit so that plots are updated
+    plt.show()
 
 #
 #
@@ -132,11 +139,10 @@ def fprint(string, args, on_console=True):
     if on_console:
         print(string)  # also print on console
 
-    logs_dir = os.path.join(os.path.realpath(''), 'logs')
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
+    if not os.path.exists(cfg.LOG_DIR):
+        os.makedirs(cfg.LOG_DIR)
 
-    logs_path = os.path.join(logs_dir, '{}_{}.txt'.format(
+    logs_path = os.path.join(cfg.LOG_DIR, '{}_{}.txt'.format(
         'pt' if args.pretrained else 'fs', args.t_start))
 
     with open(logs_path, "a") as f:

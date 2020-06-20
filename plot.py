@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+import cfg
 from utils import load_json_args
 
 def generate_plots(json_path):
@@ -13,7 +14,7 @@ def generate_plots(json_path):
         return
 
     csv_name = '{}_{}.csv'.format('pt' if json_args['pretrained'] else 'fs', json_args['t_start'])
-    csv_path = os.path.join('logs', csv_name)
+    csv_path = os.path.join(cfg.LOG_DIR, csv_name)
 
     if not os.path.exists(csv_path):
         print('ERROR: Cannot found {}'.format(csv_path))
