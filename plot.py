@@ -4,15 +4,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import get_config
+from utils import load_json_args
 
-def generate_plots(config_path):
+def generate_plots(json_path):
 
-    configs = get_config(config_path)
-    if configs is None:
+    json_args = load_json_args(json_path)
+    if json_args is None:
         return
 
-    csv_name = '{}_{}.csv'.format('pt' if configs['pretrained'] else 'fs', configs['t_start'])
+    csv_name = '{}_{}.csv'.format('pt' if json_args['pretrained'] else 'fs', json_args['t_start'])
     csv_path = os.path.join('logs', csv_name)
 
     if not os.path.exists(csv_path):
@@ -26,7 +26,7 @@ def generate_plots(config_path):
         v_val = stats_df['val_' + metric]
 
         plt.title("{} vs {} (opt={}, lr={})".format(
-            'train', 'val', configs['optimizer'], configs['lr']))
+            'train', 'val', json_args['optimizer'], json_args['lr']))
         plt.xlabel('epoch')
         plt.ylabel(metric)
         plt.plot(range(1, len(stats_df)+1), v_train, label='train')
@@ -40,7 +40,7 @@ def generate_plots(config_path):
             os.makedirs(plots_dir)
 
         plot_name = '{}_{}_{}.png'.format(
-            'pt' if configs['pretrained'] else 'fs', configs['t_start'], metric)
+            'pt' if json_args['pretrained'] else 'fs', json_args['t_start'], metric)
         plot_path = os.path.join(plots_dir, plot_name)
         plt.savefig(plot_path)
         plt.close()
@@ -49,9 +49,9 @@ def generate_plots(config_path):
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch Animals Plot')
-    parser.add_argument('--config_path', default='', type=str)
+    parser.add_argument('--json_path', default='', type=str)
     args = parser.parse_args()
-    generate_plots(args.config_path)
+    generate_plots(args.json_path)
 
 
 if __name__ == "__main__":

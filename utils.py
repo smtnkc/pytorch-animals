@@ -42,34 +42,34 @@ def load_args():
 #
 #
 
-def create_config_file(args):
+def export_args(args):
 
-    config_params = {}  # to dump the run configurations that will be used in plotting
-    for param in vars(args):
-        config_params[param] = getattr(args, param)
+    json_args = {}  # to dump the running args that will be used in plotting
+    for v in vars(args):
+        json_args[v] = getattr(args, v)
 
-    # Dump run configs to JSON file
-    config_path = 'logs/{}_{}.json'.format('pt' if args.pretrained else 'fs', args.t_start)
-    with open(config_path, "w") as json_data_file:
-        json.dump(config_params, json_data_file)
-    fprint('\nCreated config file\t-> {}'.format(config_path), args)
+    # Write args to json file
+    json_path = 'logs/{}_{}.json'.format('pt' if args.pretrained else 'fs', args.t_start)
+    with open(json_path, "w") as json_file:
+        json.dump(json_args, json_file)
+    fprint('\nCreated json args file\t-> {}'.format(json_path), args)
 
-    return config_path
+    return json_path
 
 
 
 # Plot single image
-def display_single(img_folders, normalize, category_names, img_id=-1):
+def display_single(img_folders, normalize, categories, img_id=-1):
     folder = img_folders['test']
     if img_id == -1:
         img_id = random.randint(0, len(folder))
     tensor = folder.__getitem__(img_id)
     img = tensor[0].permute(1, 2, 0)
-    label = tensor[1]
+    category_id = tensor[1]
     img_denorm = img * np.array(normalize.std) + np.array(normalize.mean) # denormalization
     plt.figure(figsize=(3, 3))
     plt.imshow(np.clip(img_denorm, 0, 1))
-    plt.title(category_names[label])
+    plt.title(categories[category_id])
     plt.show()
 
 #
@@ -81,7 +81,7 @@ def display_single(img_folders, normalize, category_names, img_id=-1):
 
 
 # Plot N images
-def display_multiple(args, normalize, category_names, data_loaders, N):
+def display_multiple(args, normalize, categories, data_loaders, N):
 
     # Get a batch of test data
     batch = next(iter(data_loaders['test']))
@@ -90,8 +90,8 @@ def display_multiple(args, normalize, category_names, data_loaders, N):
         print("N must be less than batch_size={}".format(args.batch_size))
         return
 
-    images, categories = batch
-    title = [category_names[x] for x in categories[0:N]]
+    images, category_ids = batch
+    title = [categories[x] for x in category_ids[0:N]]
 
     # Get a grid of N images from batch
     grid = torchvision.utils.make_grid(images[0:N])
@@ -111,14 +111,14 @@ def display_multiple(args, normalize, category_names, data_loaders, N):
 #
 #
 
-def get_config(config_path):
-    if config_path == '' or not os.path.exists(config_path):
-        print('ERROR: set a valid --config_path')
+def load_json_args(json_path):
+    if json_path == '' or not os.path.exists(json_path):
+        print('ERROR: set a valid --json_path')
         return
 
-    with open(config_path) as json_data_file:
-        configs = json.load(json_data_file)
-    return configs
+    with open(json_path) as json_file:
+        json_args = json.load(json_file)
+    return json_args
 
 #
 #
@@ -149,14 +149,14 @@ def fprint(string, args, on_console=True):
 #
 #
 
-def calculate_metrics(preds, labels):
+def calculate_metrics(preds, category_ids):
     preds = preds.numpy()
-    labels = labels.numpy()
+    category_ids = category_ids.numpy()
 
-    # fprint(classification_report(labels, preds), args)
-    acc = accuracy_score(labels, preds)
-    f1 = f1_score(labels, preds, average='weighted')
-    # recall = recall_score(labels, preds, average='weighted')
-    # prec = precision_score(labels, preds, average='weighted')
+    # print(classification_report(category_ids, preds))
+    acc = accuracy_score(category_ids, preds)
+    f1 = f1_score(category_ids, preds, average='weighted')
+    # recall = recall_score(category_ids, preds, average='weighted')
+    # prec = precision_score(category_ids, preds, average='weighted')
 
     return acc, f1

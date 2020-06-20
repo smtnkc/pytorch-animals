@@ -33,52 +33,51 @@ AlexNet(
   )
 )
 
-features.0.weight         requires_grad = True
-features.0.bias           requires_grad = True
-features.3.weight         requires_grad = True
-features.3.bias           requires_grad = True
-features.6.weight         requires_grad = True
-features.6.bias           requires_grad = True
-features.8.weight         requires_grad = True
-features.8.bias           requires_grad = True
-features.10.weight        requires_grad = True
-features.10.bias          requires_grad = True
-classifier.1.weight       requires_grad = True
-classifier.1.bias         requires_grad = True
-classifier.4.weight       requires_grad = True
-classifier.4.bias         requires_grad = True
+features.0.weight         requires_grad = False
+features.0.bias           requires_grad = False
+features.3.weight         requires_grad = False
+features.3.bias           requires_grad = False
+features.6.weight         requires_grad = False
+features.6.bias           requires_grad = False
+features.8.weight         requires_grad = False
+features.8.bias           requires_grad = False
+features.10.weight        requires_grad = False
+features.10.bias          requires_grad = False
+classifier.1.weight       requires_grad = False
+classifier.1.bias         requires_grad = False
+classifier.4.weight       requires_grad = False
+classifier.4.bias         requires_grad = False
 classifier.6.weight       requires_grad = True
 classifier.6.bias         requires_grad = True
 
-Created config file	-> logs/fs_20200620_134728.json
+Created json args file	-> logs/pt_20200620_164634.json
 
-TRAINING PARAMS:
+RUNNING ARGS:
 {
     "seed": 2020,
     "batch_size": 14,
-    "epochs": 3,
+    "epochs": 2,
     "lr": 0.0001,
     "optimizer": "adam",
     "input_size": 224,
     "debug": false,
-    "pretrained": false,
+    "pretrained": true,
     "device": "cpu",
-    "t_start": "20200620_134728"
+    "t_start": "20200620_164634"
 }
 
-Created stats file	-> logs/fs_20200620_134728.csv
+Created stats file	-> logs/pt_20200620_164634.csv
 
-TRAINING 3 EPOCHS...
+TRAINING 2 EPOCHS...
 
      epoch train_loss  train_acc   train_f1   val_loss    val_acc     val_f1
-         0    1.31425   0.308036   0.308212    1.12611   0.424107   0.285816
-         1    1.13841   0.435268   0.408397    1.00012   0.508929   0.459572
-         2    1.10348   0.446429   0.436597   0.961145   0.558036    0.52483
+         0   0.637604   0.782366   0.781533   0.185741    0.96875   0.968885
+         1   0.223534   0.947545   0.947867   0.100056   0.977679   0.977787
 
-Training completed in 4m 21s
+Training completed in 0m 57s
 
-Saved best checkpoint	-> models/fs_20200620_134728_0.558036.pth
+Saved best checkpoint	-> models/pt_20200620_164634_0.977679.pth
 
 TESTING...
-159/280 predictions are correct -> Test acc: 0.567857   f1: 0.542615
+272/280 predictions are correct -> Test acc: 0.971429   f1: 0.971546
 

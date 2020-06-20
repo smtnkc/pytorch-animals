@@ -4,36 +4,31 @@ import copy
 import torch
 import pandas as pd
 from torchvision import models
-from torchvision import transforms
-from PIL import Image
 
+import cfg
 from utils import fprint, calculate_metrics
 
-def initialize_model(out_size, args):
 
-    model = models.alexnet(pretrained=args.pretrained)
+def initialize_model(is_pretrained):
+
+    model = models.alexnet(pretrained=is_pretrained)
 
     # initially disable all parameter updates
-    if args.pretrained:
+    if is_pretrained:
         for param in model.parameters():
             param.requires_grad = False
 
     # reshape the output layer
     in_size = model.classifier[6].in_features
-    model.classifier[6] = torch.nn.Linear(in_size, out_size)
+    model.classifier[6] = torch.nn.Linear(in_size, cfg.NUM_CATEGORIES)
 
-    if args.pretrained:
+    if is_pretrained:
         params_to_update = []
         for param in model.parameters():
             if param.requires_grad:
                 params_to_update.append(param)  # parameters of reshaped layer
     else:
         params_to_update = model.parameters()  # parameters of all layers
-
-    fprint("\nARCHITECTURE:\n\n{}\n".format(model), args)
-
-    for name, param in model.named_parameters():
-        fprint("{:25} requires_grad = {}".format(name, param.requires_grad), args)
 
     return model, params_to_update
 
@@ -75,12 +70,12 @@ def train_model(model, data_loaders, criterion, optimizer, args):
             phase_loss = 0.0
             phase_corrects = 0
             phase_preds = torch.LongTensor()
-            phase_labels = torch.LongTensor()
+            phase_category_ids = torch.LongTensor()
 
             # Iterate over data
-            for inputs, labels in data_loaders[phase]:
+            for inputs, category_ids in data_loaders[phase]:
                 inputs = inputs.to(torch.device(args.device))
-                labels = labels.to(torch.device(args.device))
+                category_ids = category_ids.to(torch.device(args.device))
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -90,7 +85,7 @@ def train_model(model, data_loaders, criterion, optimizer, args):
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
                     outputs = model(inputs)
-                    loss = criterion(outputs, labels)
+                    loss = criterion(outputs, category_ids)
 
                     _, preds = torch.max(outputs, 1)
 
@@ -101,14 +96,14 @@ def train_model(model, data_loaders, criterion, optimizer, args):
 
                 # stats
                 batch_loss = loss.item() * inputs.size(0)
-                batch_corrects = torch.sum(preds == labels.data)
+                batch_corrects = torch.sum(preds == category_ids.data)
                 phase_loss += batch_loss
                 phase_corrects += batch_corrects
                 phase_preds = torch.cat((phase_preds, preds), 0)
-                phase_labels = torch.cat((phase_labels, labels), 0)
+                phase_category_ids = torch.cat((phase_category_ids, category_ids), 0)
 
             epoch_loss = phase_loss / len(data_loaders[phase].dataset)
-            epoch_acc, epoch_f1 = calculate_metrics(phase_preds, phase_labels)
+            epoch_acc, epoch_f1 = calculate_metrics(phase_preds, phase_category_ids)
 
             stats_df.at[0, 'epoch'] = epoch
             stats_df.at[0, phase + '_loss'] = round(epoch_loss, 6)
@@ -171,22 +166,22 @@ def test_model(model, data_loaders, args):
     with torch.no_grad():
         phase_corrects = 0
         phase_preds = torch.LongTensor()
-        phase_labels = torch.LongTensor()
+        phase_category_ids = torch.LongTensor()
 
-        for inputs, labels in data_loaders['test']:
+        for inputs, category_ids in data_loaders['test']:
             inputs = inputs.to(torch.device(args.device))
-            labels = labels.to(torch.device(args.device))
+            category_ids = category_ids.to(torch.device(args.device))
 
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
 
-            batch_corrects = torch.sum(preds == labels.data)
+            batch_corrects = torch.sum(preds == category_ids.data)
             phase_corrects += batch_corrects
             phase_preds = torch.cat((phase_preds, preds), 0)
-            phase_labels = torch.cat((phase_labels, labels), 0)
+            phase_category_ids = torch.cat((phase_category_ids, category_ids), 0)
 
         dataset = data_loaders['test'].dataset
-        acc, f1 = calculate_metrics(phase_preds, phase_labels)
+        acc, f1 = calculate_metrics(phase_preds, phase_category_ids)
 
         fprint('{}/{} predictions are correct -> Test acc: {:.6f}   f1: {:.6f}\n'.format(
             phase_corrects, len(dataset), acc, f1), args)
@@ -194,34 +189,3 @@ def test_model(model, data_loaders, args):
     model.train(mode=was_training)  # reinstate the previous mode
 
     return acc
-
-#
-#
-#
-#
-#
-#
-
-def predict(model, normalize, category_names, input_size, img_path, args):
-    """ Prediction for a single test image """
-    was_training = model.training  # store mode
-    model.eval()  # run in evaluation mode
-
-    loader = transforms.Compose([transforms.Resize(input_size),
-                                 transforms.CenterCrop(input_size),
-                                 transforms.ToTensor(),
-                                 normalize
-                                ])
-
-    img = Image.open(img_path)
-    img = loader(img).float()
-    img = img.unsqueeze(0)
-
-    with torch.no_grad():
-        inp = img.to(torch.device(args.device))
-        output = model(inp)
-        _, pred = torch.max(output, 1)
-
-    model.train(mode=was_training)  # reinstate the previous mode
-
-    return category_names[pred.numpy()[0]]
