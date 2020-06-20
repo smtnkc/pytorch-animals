@@ -30,10 +30,10 @@ def initialize_model(out_size, args):
     else:
         params_to_update = model.parameters()  # parameters of all layers
 
-    fprint("\nARCHITECTURE:\n\n{}\n".format(model), args, True)
+    fprint("\nARCHITECTURE:\n\n{}\n".format(model), args)
 
     for name, param in model.named_parameters():
-        fprint("{:25} requires_grad = {}".format(name, param.requires_grad), args, True)
+        fprint("{:25} requires_grad = {}".format(name, param.requires_grad), args)
 
     return model, params_to_update
 
@@ -46,11 +46,18 @@ def initialize_model(out_size, args):
 
 
 def train_model(model, data_loaders, criterion, optimizer, args):
-    stats_df = pd.DataFrame(columns=['train_loss', 'train_acc', 'train_f1',
-                                     'val_loss', 'val_acc', 'val_f1'])
+
+    # create states df and csv file
+    stats_df = pd.DataFrame(
+        columns=['epoch', 'train_loss', 'train_acc', 'train_f1', 'val_loss', 'val_acc', 'val_f1'])
+    stats_path = 'logs/{}_{}.csv'.format('pt' if args.pretrained else 'fs', args.t_start)
+    stats_df.to_csv(stats_path, sep=',', index=False)  # write loss and acc values
+    fprint('\nCreated stats file\t-> {}'.format(stats_path), args)
+    fprint('\nTRAINING {} EPOCHS...\n'.format(args.epochs), args)
 
     since = time.time()
 
+    # initialize best values
     best_model_state_dict = copy.deepcopy(model.state_dict())
     best_opt_state_dict = copy.deepcopy(optimizer.state_dict())
     best_loss = 999999.9
@@ -58,9 +65,6 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     best_epoch = 0
 
     for epoch in range(args.epochs):
-        fprint('\nEpoch {}/{}'.format(epoch, args.epochs - 1), args, True)
-        fprint('-' * 10, args, True)
-
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -75,8 +79,8 @@ def train_model(model, data_loaders, criterion, optimizer, args):
 
             # Iterate over data
             for inputs, labels in data_loaders[phase]:
-                inputs = inputs.to(args.device)
-                labels = labels.to(args.device)
+                inputs = inputs.to(torch.device(args.device))
+                labels = labels.to(torch.device(args.device))
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -95,7 +99,7 @@ def train_model(model, data_loaders, criterion, optimizer, args):
                         loss.backward()
                         optimizer.step()
 
-                # statistics
+                # stats
                 batch_loss = loss.item() * inputs.size(0)
                 batch_corrects = torch.sum(preds == labels.data)
                 phase_loss += batch_loss
@@ -106,12 +110,10 @@ def train_model(model, data_loaders, criterion, optimizer, args):
             epoch_loss = phase_loss / len(data_loaders[phase].dataset)
             epoch_acc, epoch_f1 = calculate_metrics(phase_preds, phase_labels)
 
-            fprint('{:7} loss: {:.6f}   acc: {:.6f}   f1: {:.6f}'.format(
-                phase, epoch_loss, epoch_acc, epoch_f1), args, True)
-
-            stats_df.at[epoch, phase + '_loss'] = round(epoch_loss, 6)
-            stats_df.at[epoch, phase + '_acc'] = round(epoch_acc, 6)
-            stats_df.at[epoch, phase + '_f1'] = round(epoch_f1, 6)
+            stats_df.at[0, 'epoch'] = epoch
+            stats_df.at[0, phase + '_loss'] = round(epoch_loss, 6)
+            stats_df.at[0, phase + '_acc'] = round(epoch_acc, 6)
+            stats_df.at[0, phase + '_f1'] = round(epoch_f1, 6)
 
             # define the new bests
             if phase == 'val' and epoch_acc > best_acc:
@@ -121,27 +123,25 @@ def train_model(model, data_loaders, criterion, optimizer, args):
                 best_loss = copy.deepcopy(epoch_loss)
                 best_epoch = epoch
 
+        # append epoch stats to file
+        fprint(stats_df.to_string(index=False, header=(epoch == 0), col_space=10, justify='right'), args)
+        stats_df.to_csv(stats_path, mode='a', header=False, index=False)
+
     time_elapsed = time.time() - since
-    fprint('\nTraining completed in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60), args, True)
+    fprint('\nTraining completed in {:.0f}m {:.0f}s\n'.format(
+        time_elapsed // 60, time_elapsed % 60), args)
 
     # reload best model weights and best optimizer variables
     model.load_state_dict(best_model_state_dict)
     optimizer.load_state_dict(best_opt_state_dict)
 
     # save best checkpoint
-    cp_dir = os.path.join(os.path.realpath(''), 'models')
+    cp_dir = 'models'
     if not os.path.exists(cp_dir):
         os.makedirs(cp_dir)
 
     cp_path = os.path.join(cp_dir, '{}_{}_{:.6f}.pth'.format(
         'pt' if args.pretrained else 'fs', args.t_start, best_acc))
-
-    # save stats
-    stats_path = 'logs/{}_{}.csv'.format('pt' if args.pretrained else 'fs', args.t_start)
-
-    stats_df.to_csv(stats_path, sep=',', index=True)  # write loss and acc values
-    fprint('Saved loss and accuracy stats -> {}'.format(stats_path), args, True)
 
     torch.save({
         'epoch': best_epoch,
@@ -151,8 +151,7 @@ def train_model(model, data_loaders, criterion, optimizer, args):
         'acc': best_acc
     }, cp_path)
 
-    fprint('Saved best checkpoint ->  Epoch: {} val loss: {:.6f}   acc: {:6f}'
-           .format(best_epoch, best_loss, best_acc), args, True)
+    fprint('Saved best checkpoint\t-> {}'.format(cp_path), args)
 
     return model, optimizer
 
@@ -165,7 +164,7 @@ def train_model(model, data_loaders, criterion, optimizer, args):
 
 
 def test_model(model, data_loaders, args):
-    fprint('\nRUNNING FOR TEST SET...', args, True)
+    fprint('\nTESTING...', args)
     was_training = model.training  # store mode
     model.eval()  # run in evaluation mode
 
@@ -175,8 +174,8 @@ def test_model(model, data_loaders, args):
         phase_labels = torch.LongTensor()
 
         for inputs, labels in data_loaders['test']:
-            inputs = inputs.to(args.device)
-            labels = labels.to(args.device)
+            inputs = inputs.to(torch.device(args.device))
+            labels = labels.to(torch.device(args.device))
 
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
@@ -189,8 +188,8 @@ def test_model(model, data_loaders, args):
         dataset = data_loaders['test'].dataset
         acc, f1 = calculate_metrics(phase_preds, phase_labels)
 
-        fprint('{}/{} predictions are correct -> Test acc: {:.6f}   f1: {:.6f}'.format(
-            phase_corrects, len(dataset), acc, f1), args, True)
+        fprint('{}/{} predictions are correct -> Test acc: {:.6f}   f1: {:.6f}\n'.format(
+            phase_corrects, len(dataset), acc, f1), args)
 
     model.train(mode=was_training)  # reinstate the previous mode
 
@@ -219,7 +218,7 @@ def predict(model, normalize, category_names, input_size, img_path, args):
     img = img.unsqueeze(0)
 
     with torch.no_grad():
-        inp = img.to(args.device)
+        inp = img.to(torch.device(args.device))
         output = model(inp)
         _, pred = torch.max(output, 1)
 

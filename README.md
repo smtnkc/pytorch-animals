@@ -25,7 +25,7 @@ python3 main.py --epoch=3
 To plot results:
 
 ```bash
-python3 plot.py --json_path='logs/xxx.json'
+python3 plot.py --config_path='logs/xxx.json'
 ```
 
 # References:

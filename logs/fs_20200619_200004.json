@@ -1,1 +1,0 @@
-{"seed": 2020, "batch_size": 14, "epochs": 20, "lr": 0.0001, "optimizer": "adam", "input_size": 224, "debug": false, "pretrained": false, "device": "cpu", "t_start": "20200619_200004"}

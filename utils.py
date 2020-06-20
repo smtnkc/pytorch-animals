@@ -1,9 +1,62 @@
 import os
+import json
 import random
+import argparse
+import datetime as dt
+from str2bool import str2bool
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 import torchvision
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, classification_report
+
+
+def load_args():
+    parser = argparse.ArgumentParser(description='PyTorch Animals')
+    parser.add_argument('--seed', default=2020, type=int)
+    parser.add_argument('--batch_size', default=14, type=int)
+    parser.add_argument('--epochs', default=5, type=int)
+    parser.add_argument('--lr', default=1e-3, type=float)
+    parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
+    parser.add_argument('--input_size', default=224, type=int)
+    parser.add_argument('--debug', default=False, type=str2bool)
+    parser.add_argument('--pretrained', default=True, type=str2bool)
+    parser.add_argument('--device', default='cpu', type=str, help='cpu or cuda')
+    parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
+
+    args = parser.parse_args()
+
+    t_start = dt.datetime.now().replace(microsecond=0)
+    args.t_start = t_start.strftime("%Y%m%d_%H%M%S")
+
+    # Reset device to cpu if cuda is not available
+    if args.device == 'cuda' and not torch.cuda.is_available():
+        args.device = 'cpu'
+
+    return args
+
+#
+#
+#
+#
+#
+#
+
+def create_config_file(args):
+
+    config_params = {}  # to dump the run configurations that will be used in plotting
+    for param in vars(args):
+        config_params[param] = getattr(args, param)
+
+    # Dump run configs to JSON file
+    config_path = 'logs/{}_{}.json'.format('pt' if args.pretrained else 'fs', args.t_start)
+    with open(config_path, "w") as json_data_file:
+        json.dump(config_params, json_data_file)
+    fprint('\nCreated config file\t-> {}'.format(config_path), args)
+
+    return config_path
+
+
 
 # Plot single image
 def display_single(img_folders, normalize, category_names, img_id=-1):
@@ -58,7 +111,24 @@ def display_multiple(args, normalize, category_names, data_loaders, N):
 #
 #
 
-def fprint(string, args, on_console=False):
+def get_config(config_path):
+    if config_path == '' or not os.path.exists(config_path):
+        print('ERROR: set a valid --config_path')
+        return
+
+    with open(config_path) as json_data_file:
+        configs = json.load(json_data_file)
+    return configs
+
+#
+#
+#
+#
+#
+#
+
+
+def fprint(string, args, on_console=True):
     if on_console:
         print(string)  # also print on console
 
@@ -83,7 +153,7 @@ def calculate_metrics(preds, labels):
     preds = preds.numpy()
     labels = labels.numpy()
 
-    # fprint(classification_report(labels, preds), args, True)
+    # fprint(classification_report(labels, preds), args)
     acc = accuracy_score(labels, preds)
     f1 = f1_score(labels, preds, average='weighted')
     # recall = recall_score(labels, preds, average='weighted')

@@ -3,139 +3,61 @@ from __future__ import print_function
 
 import os
 import platform
-import argparse
 import json
-import datetime as dt
-from str2bool import str2bool
 import torch
 import torch.optim as optim
 import torchvision
-from torchvision import transforms
-from torchvision.datasets import ImageFolder as IF
-from torch.utils.data import DataLoader as DL
 
-from utils import display_single, display_multiple, fprint
+from data_loader import get_data_loaders
+from utils import fprint, load_args, create_config_file
 from model_helper import initialize_model, train_model, test_model, predict
 from plot import generate_plots
 
-print("Python Version:", platform.python_version())
-print("PyTorch Version:", torch.__version__)
-print("Torchvision Version:", torchvision.__version__.split('a')[0])
+def main():
 
-parser = argparse.ArgumentParser(description='PyTorch Animals')
-parser.add_argument('--seed', default=2020, type=int)
-parser.add_argument('--batch_size', default=14, type=int)
-parser.add_argument('--epochs', default=5, type=int)
-parser.add_argument('--lr', default=1e-3, type=float)
-parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
-parser.add_argument('--input_size', default=224, type=int)
-parser.add_argument('--debug', default=False, type=str2bool)
-parser.add_argument('--pretrained', default=True, type=str2bool)
-parser.add_argument('--device', default='cpu', type=str, help='cpu or cuda')
-parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
+    args = load_args()
 
-args = parser.parse_args()
+    fprint("Python Version: {}".format(platform.python_version()), args)
+    fprint("PyTorch Version: {}".format(torch.__version__), args)
+    fprint("Torchvision Version: {}".format(torchvision.__version__.split('a')[0]), args)
+    fprint("Running on {}...".format(args.device), args)
 
-t_start = dt.datetime.now().replace(microsecond=0)
-args.t_start = t_start.strftime("%Y%m%d_%H%M%S")
+    data_dir = os.path.join(os.path.realpath(''), 'data')
+    category_names = ["bear", "elephant", "leopard", "zebra"]
+    num_categories = len(category_names)
 
-INPUT_SIZE = args.input_size
-DATA_DIR = os.path.join(os.path.realpath(''), 'data')
-CATEGORY_NAMES = ["bear", "elephant", "leopard", "zebra"]
-NUM_CATEGORIES = len(CATEGORY_NAMES)
+    data_loaders = get_data_loaders(data_dir, category_names, args)
 
-# Detect if we have a GPU available
-updated_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-args.device = str(updated_device)  # keep as str for now, otherwise cannot dump json
-fprint("Running on {}...".format(args.device), args, True)
+    # Initialize model
+    model, params_to_update = initialize_model(num_categories, args)
 
-# All pre-trained models expect input images normalized in the same way
-# For details: https://pytorch.org/docs/master/torchvision/models.html
-NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # Send the model to CPU or GPU
+    model = model.to(torch.device(args.device))
 
-# Data augmentation and normalization for training
-# Just resizing and normalization for val and test
-trans_dict = {
-    'train': transforms.Compose([transforms.RandomResizedCrop(INPUT_SIZE),
-                                 transforms.RandomHorizontalFlip(),
-                                 transforms.ToTensor(),
-                                 NORMALIZE
-                                ]),
+    # Setup the optimizer
+    if args.optimizer == 'sgdm':
+        optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+    elif args.optimizer == 'adam':
+        optimizer = optim.AdamW(params_to_update, lr=args.lr)
 
-    'val': transforms.Compose([transforms.Resize(INPUT_SIZE),
-                               transforms.CenterCrop(INPUT_SIZE),
-                               transforms.ToTensor(),
-                               NORMALIZE
-                              ]),
+    # Setup the loss function
+    criterion = torch.nn.CrossEntropyLoss()
 
-    'test': transforms.Compose([transforms.Resize(INPUT_SIZE),
-                                transforms.CenterCrop(INPUT_SIZE),
-                                transforms.ToTensor(),
-                                NORMALIZE
-                               ])
-}
+    config_path = create_config_file(args)
+    with open(config_path, 'r') as json_file:
+        configs = json.load(json_file)
 
-# Create training, validation and test datasets
-img_folders = {x: IF(os.path.join(DATA_DIR, 'prepared', x), trans_dict[x])
-               for x in ['train', 'val', 'test']}
+    fprint("\nTRAINING PARAMS:\n{}".format(json.dumps(configs, indent=4)), args)
 
-# Create training, validation and test dataloaders
-# When using CUDA, set num_workers=1 and pin_memory=True
-data_loaders = {x: DL(img_folders[x], batch_size=args.batch_size, shuffle=True,
-                      num_workers=int(args.device == 'cuda'),
-                      pin_memory=(args.device == 'cuda'))
-                for x in ['train', 'val', 'test']}
+    # Train and evaluate
+    model, optimizer = train_model(model, data_loaders, criterion, optimizer, args)
 
-if args.debug:
-    display_single(img_folders, NORMALIZE, CATEGORY_NAMES, img_id=153)  # 153 is arbitrarily chosen
-    display_multiple(args, NORMALIZE, CATEGORY_NAMES, data_loaders, N=4)  # display 4 images
+    # Test
+    test_model(model, data_loaders, args)
 
-# Initialize model
-model, params_to_update = initialize_model(NUM_CATEGORIES, args)
+    # Generate plots:
+    generate_plots(config_path)
 
-# Send the model to CPU or GPU
-model = model.to(updated_device)
 
-# Setup the optimizer
-if args.optimizer == 'sgdm':
-    optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
-elif args.optimizer == 'adam':
-    optimizer = optim.AdamW(params_to_update, lr=args.lr)
-
-# Setup the loss function
-criterion = torch.nn.CrossEntropyLoss()
-
-# Log training parameters
-TRAIN_PARAMS = ""
-JSON_PARAMS = {}  # to dump the run configurations that will be used in plotting
-for param in vars(args):
-    TRAIN_PARAMS += param + '=' + str(getattr(args, param)) + '\n'
-    JSON_PARAMS[param] = getattr(args, param)
-fprint("\nTRAINING WITH PARAMS:\n{}".format(TRAIN_PARAMS), args, True)
-
-# Dump run configs to JSON file
-JSON_PATH = os.path.join(os.path.realpath(''), 'logs/{}_{}.json'.format(
-    'pt' if args.pretrained else 'fs', args.t_start
-))
-with open(JSON_PATH, "w") as json_data_file:
-    json.dump(JSON_PARAMS, json_data_file)
-
-# Train and evaluate
-args.device = updated_device  # now load updated device object to args.device (str -> obj)
-model, optimizer = train_model(model, data_loaders, criterion, optimizer, args)
-
-# Or load a checkpoint
-# checkpoint = torch.load('models/xxx.pth')
-# model.load_state_dict(checkpoint['model_state_dict'])
-# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-# epoch = checkpoint['epoch']
-# loss = checkpoint['loss']
-# acc = checkpoint['acc']
-
-# Generate plots:
-generate_plots(JSON_PATH)
-
-test_score = test_model(model, data_loaders, args)
-
-# Prediction for a single test image
-# print(predict(model, NORMALIZE, CATEGORY_NAMES, INPUT_SIZE, 'data/bear_test.JPEG', args))
+if __name__ == "__main__":
+    main()
