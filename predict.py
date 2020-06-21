@@ -60,9 +60,11 @@ def main():
 
     # Setup the optimizer
     if json_args['optimizer'] == 'sgdm':
-        optimizer = optim.SGD(params_to_update, lr=json_args['lr'], momentum=0.9)
+        optimizer = optim.SGD(params_to_update, lr=json_args['lr'],
+                              weight_decay=json_args['weight_decay'], momentum=0.9)
     elif json_args['optimizer'] == 'adam':
-        optimizer = optim.AdamW(params_to_update, lr=json_args['lr'])
+        optimizer = optim.AdamW(params_to_update, lr=json_args['lr'],
+                                weight_decay=json_args['weight_decay'])
 
     checkpoint = torch.load(args.model_path)
 

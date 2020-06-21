@@ -19,6 +19,7 @@ def load_args():
     parser.add_argument('--batch_size', default=14, type=int)
     parser.add_argument('--epochs', default=5, type=int)
     parser.add_argument('--lr', default=1e-3, type=float)
+    parser.add_argument('--weight_decay', default=0.0, type=float)
     parser.add_argument('--optimizer', default='sgdm', type=str, help='sgdm or adam')
     parser.add_argument('--input_size', default=224, type=int)
     parser.add_argument('--display_images', default=False, type=str2bool)

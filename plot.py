@@ -29,8 +29,8 @@ def generate_plots(json_path):
         v_val = stats_df['val_' + metric]
 
         plt.figure(figsize=(15, 5))
-        plt.title("{} vs {} (opt={}, lr={})".format(
-            'train', 'val', json_args['optimizer'], json_args['lr']))
+        plt.title("{} vs {} (opt={}, lr={}, weight_decay={})".format(
+            'train', 'val', json_args['optimizer'], json_args['lr'], json_args['weight_decay']))
         plt.xlabel('epoch')
         plt.ylabel(metric)
         plt.plot(range(1, len(stats_df)+1), v_train, label='train')

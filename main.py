@@ -43,9 +43,11 @@ def main():
 
     # Setup the optimizer
     if args.optimizer == 'sgdm':
-        optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+        optimizer = optim.SGD(params_to_update, lr=args.lr,
+                              weight_decay=args.weight_decay, momentum=0.9)
     elif args.optimizer == 'adam':
-        optimizer = optim.AdamW(params_to_update, lr=args.lr)
+        optimizer = optim.AdamW(params_to_update, lr=args.lr,
+                                weight_decay=args.weight_decay)
 
     # Setup the loss function
     criterion = torch.nn.CrossEntropyLoss()
