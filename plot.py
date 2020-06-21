@@ -28,6 +28,7 @@ def generate_plots(json_path):
         v_train = stats_df['train_' + metric]
         v_val = stats_df['val_' + metric]
 
+        plt.figure(figsize=(15, 5))
         plt.title("{} vs {} (opt={}, lr={})".format(
             'train', 'val', json_args['optimizer'], json_args['lr']))
         plt.xlabel('epoch')
@@ -43,7 +44,7 @@ def generate_plots(json_path):
             os.makedirs(sub_dump_dir)
         plot_name = 'plot_{}.png'.format(metric)
         plot_path = os.path.join(sub_dump_dir, plot_name)
-        plt.savefig(plot_path)
+        plt.savefig(plot_path, bbox_inches='tight', transparent="True", pad_inches=0.1)
         plt.close()
         print('Saved {} plot\t-> {}'.format(metric, plot_path))
 

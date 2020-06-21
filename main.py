@@ -3,25 +3,14 @@ from __future__ import print_function
 
 import platform
 import json
-import random
 import torch
 import torch.optim as optim
 import torchvision
-import numpy as np
 
 from data_loader import get_data_loaders
-from utils import fprint, load_args, export_args, load_json_args
+from utils import fprint, load_args, export_args, load_json_args, init_random_seeds
 from model_helper import initialize_model, train_model, test_model
 from plot import generate_plots
-
-
-def init_random_seeds(seed):
-    """ For reproducibility of results """
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    np.random.seed(seed)
-    random.seed(seed)
 
 
 def main():

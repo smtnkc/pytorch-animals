@@ -44,6 +44,21 @@ def load_args():
 #
 #
 
+def init_random_seeds(seed):
+    """ For reproducibility of results """
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
+    random.seed(seed)
+
+#
+#
+#
+#
+#
+#
+
 
 def get_sub_dump_dir(args):
     sub_dump_dir = os.path.join(cfg.DUMP_DIR, '{}_{}').format(
