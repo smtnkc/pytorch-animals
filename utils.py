@@ -24,6 +24,7 @@ def load_args():
     parser.add_argument('--input_size', default=224, type=int)
     parser.add_argument('--display_images', default=False, type=str2bool)
     parser.add_argument('--pretrained', default=True, type=str2bool)
+    parser.add_argument('--save', default=True, type=str2bool)
     parser.add_argument('--device', default='cpu', type=str, help='cpu or cuda')
     parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
 

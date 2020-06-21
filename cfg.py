@@ -4,6 +4,7 @@ from torchvision import transforms
 
 DATA_DIR = 'data'
 DUMP_DIR = 'dumps'
+PLOT_DIR = 'plots'
 MODEL_DIR = 'models'
 CATEGORIES = ["bear", "elephant", "leopard", "zebra"]
 NUM_CATEGORIES = len(CATEGORIES)

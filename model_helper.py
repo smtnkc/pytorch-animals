@@ -140,15 +140,15 @@ def train_model(model, data_loaders, criterion, optimizer, args):
     cp_path = os.path.join(cfg.MODEL_DIR, '{}_{}_{:.6f}.pth'.format(
         'pt' if args.pretrained else 'fs', args.t_start, best_acc))
 
-    torch.save({
-        'epoch': best_epoch,
-        'model_state_dict': best_model_state_dict,
-        'optimizer_state_dict': best_opt_state_dict,
-        'loss': best_loss,
-        'acc': best_acc
-    }, cp_path)
-
-    fprint('Saved best checkpoint\t-> {}'.format(cp_path), args)
+    if args.save:
+        torch.save({
+            'epoch': best_epoch,
+            'model_state_dict': best_model_state_dict,
+            'optimizer_state_dict': best_opt_state_dict,
+            'loss': best_loss,
+            'acc': best_acc
+        }, cp_path)
+        fprint('Saved best checkpoint\t-> {}'.format(cp_path), args)
 
     return model, optimizer
 

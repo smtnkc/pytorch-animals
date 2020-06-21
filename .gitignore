@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 dumps/
+plots/
 models/
 data/
 .DS_Store
