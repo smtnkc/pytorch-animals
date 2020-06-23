@@ -31,7 +31,7 @@ python3 plot.py --json_path='dumps/xxx/args.json'
 To predict an image using a checkpoint:
 
 ```bash
-python3 predict.py --model_path='models/checkpoint_file.pth' --img_path='test_image_file.JPEG' --label='bear'
+python3 predict.py --model_path='models/checkpoint_file.pth' --img_path='test_image_file.JPEG'
 ```
 
 # References:
